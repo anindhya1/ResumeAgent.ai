@@ -142,5 +142,3 @@ Built with:
 - [pypdf](https://pypi.org/project/pypdf/)
 - [Pydantic](https://docs.pydantic.dev/)
 - [Requests](https://requests.readthedocs.io/)
-
-**Live demo:** https://huggingface.co/spaces/Anindhya/ResumeAgent.ai
