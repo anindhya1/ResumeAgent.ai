@@ -8,49 +8,51 @@ An AI-powered agent that answers questions about my resume in real time — like
 
 ## What it does
 
-- **Conversational Q&A:** Ask about experience, projects, skills, education — get precise answers instantly.
-- **Understands my profile:** The agent loads a *summary* and my *LinkedIn PDF* for grounded, accurate replies.
-- **Smart actions via tools:**  
-  - Records interest with email + notes (for follow-ups).  
-  - Logs unanswered questions (so I can improve coverage).
-- **Clean UI:** Built with Gradio’s chat interface for a simple, fast experience.
+- **Conversational Q&A** – ask about experience, projects, skills, education, and get precise answers instantly  
+- **Context-grounded answers** – responses are based on `me/summary.txt` and `me/linkedin.pdf`  
+- **Smart tools via function calling** –  
+  - `record_user_details(email, name, notes)` → records interest for follow-up  
+  - `record_unknown_question(question)` → logs questions the agent could not answer  
+- **Evaluator schemas (Pydantic)** – optional self-evaluator utilities for stricter validation and retries  
+- **Clean UI** – Gradio chat interface for simple, interactive use  
+- **Notifications** – optional Pushover integration for alerts when someone shares contact info or asks an unknown question  
 
 ---
 
 ## How it works (architecture)
 
-1. **Context loading**
-   - Reads `me/summary.txt` and text-extracts `me/linkedin.pdf` (via `pypdf`) into the system prompt.
+1. **Context loading**  
+   - Loads `summary.txt` and extracts text from `linkedin.pdf` (via `pypdf`) into the system prompt.  
 
-2. **LLM chat loop**
-   - Uses OpenAI’s `gpt-4o-mini` to chat, with function-calling tools enabled.
-   - If the model asks to call a tool, the app executes it and continues the conversation.
+2. **LLM chat loop**  
+   - Uses OpenAI’s `gpt-4o-mini` for dialogue, with function-calling tools enabled.  
+   - If the model decides a tool is needed, it issues a structured function call which is then executed.  
 
-3. **Tools (function calling)**
-   - `record_user_details(email, name, notes)` → sends a **Pushover** notification so I can follow up.
-   - `record_unknown_question(question)` → sends a Pushover note with the missed question.
+3. **Tool execution**  
+   - Tools are implemented with clear schemas and executed based on LLM calls.  
+   - Outputs are validated and passed back to the chat loop.  
 
-4. **(Optional) self-evaluator utilities**
-   - Includes a Pydantic-based evaluator schema prepared for quality checks and automatic retrying with feedback (helper methods in code).  
-     *Note:* The main chat flow focuses on fast responses; evaluator helpers are available if you want stricter guardrails.
+4. **Evaluator (optional)**  
+   - Includes Pydantic-based evaluator schema for structured feedback and retry loops.  
+   - Can be enabled if stricter guardrails are needed.  
 
 ---
 
 ## Project layout
 
-- `app.py` — main Gradio app + agent logic, OpenAI calls, tools, and (optional) evaluator helpers  
-- `me/summary.txt` — short narrative summary of my background (required)  
-- `me/linkedin.pdf` — exported LinkedIn profile PDF used for grounded answers (required)  
-- `README.md` — this file
+- `app.py` — main Gradio app, chat loop, tools, evaluator helpers  
+- `me/summary.txt` — narrative summary of background (required)  
+- `me/linkedin.pdf` — exported LinkedIn profile PDF (required)  
+- `README.md` — documentation  
 
-> Make sure the `me/` folder exists and contains both files.
+> Ensure the `me/` folder exists with both files before running.
 
 ---
 
 ## Setup
 
 **Requirements**
-- Python 3.10+ recommended
+- Python 3.10+ recommended  
 
 **Install**
     
@@ -60,45 +62,43 @@ An AI-powered agent that answers questions about my resume in real time — like
 
 **Environment**
 
-Create a `.env` file in the project root:
+Create a `.env` file:
 
     # Required
     OPENAI_API_KEY=sk-your-key
 
-    # Optional (for notifications when someone leaves their email or asks an unknown question)
+    # Optional (for notifications)
     PUSHOVER_TOKEN=your-pushover-app-token
     PUSHOVER_USER=your-pushover-user-key
-
-> If you don’t want notifications, you can leave the Pushover variables unset or stub the `push()` function in `app.py`.
 
 **Run locally**
 
     python app.py
 
-Then open the local URL printed in the terminal (usually `http://127.0.0.1:7860/`).
+App will be available at `http://127.0.0.1:7860/`.
 
 ---
 
-## Try these example questions
+## Example questions
 
-- “What’s your experience with NLP and knowledge graphs?”  
-- “Tell me about a project you’re most proud of.”  
-- “What tools and frameworks do you use regularly?”  
-- “How can I contact you about an opportunity?” *(the agent will politely ask for an email and record it)*
+- "What’s your experience with NLP and knowledge graphs?"  
+- "Tell me about a project you’re most proud of."  
+- "What tools and frameworks do you use regularly?"  
+- "How can I contact you about an opportunity?"  
 
 ---
 
 ## Configuration tips
 
-- **Model choice:** In `app.py`, search for `gpt-4o-mini` and swap with another model string if needed.
-- **Notification stack:** Using Pushover for simplicity; swap out with email/webhook/etc. by editing `push()` and the two tool functions.
-- **Context sources:** Replace `me/summary.txt` and `me/linkedin.pdf` with your own files — keep them succinct and up-to-date for best results.
+- **Model choice** – swap `gpt-4o-mini` in `app.py` with another model string if desired  
+- **Notifications** – currently uses Pushover; can be swapped for email/webhooks in `push()`  
+- **Context sources** – update `summary.txt` and `linkedin.pdf` for best results  
 
 ---
 
 ## Deploy to Hugging Face Spaces
 
-This repo is ready for Spaces (Gradio). If you use Spaces’ README metadata, include this YAML at the **top** of the Space’s README (not necessary on GitHub):
+This repo is ready for Spaces (Gradio). To enable:
 
     ---
     title: ResumeAgent.ai
@@ -107,38 +107,48 @@ This repo is ready for Spaces (Gradio). If you use Spaces’ README metadata, in
     sdk_version: 5.34.2
     ---
 
-Then push your repo to a Space and it should boot automatically.
+Push to your Hugging Face Space, and it will boot automatically.
+
+---
+
+## Concepts Implemented
+
+- **Pydantic** – structured validation for evaluator schemas and tool inputs/outputs  
+- **Function calling** – LLM triggers tools with structured arguments  
+- **Grounded context** – uses personal résumé files for accurate responses  
+- **Environment-based config** – `.env` keeps keys and secrets out of code  
+- **Notifications** – optional Pushover alerts for leads and unknown questions  
+- **Extensible design** – tools and evaluators can be extended or replaced  
 
 ---
 
 ## Privacy
 
-- The agent only reads the files you provide in `me/`.  
-- Email addresses and unknown questions are **not stored in the repo** — they’re sent as notifications (if Pushover is configured).  
-- No analytics or third-party tracking beyond your chosen LLM provider.
+- Only reads files in `me/`  
+- Email addresses and unknown questions are not stored in the repo (only sent as notifications if enabled)  
+- No tracking beyond your chosen LLM provider  
 
 ---
 
 ## Roadmap
 
-- Optional vector store for larger résumés/portfolios  
+- Vector store for larger résumés/portfolios  
 - Source citations in answers  
-- More channels for follow-up (email/Discord/webhooks)  
-- Built-in evaluator loop toggle in the UI
+- Additional notification channels (email, Discord, Slack)  
+- Built-in evaluator toggle in the UI  
 
 ---
 
 ## License
 
-MIT — see `LICENSE` (or choose your preferred license).
+MIT License  
 
 ---
 
 ## Acknowledgments
 
-Built with:
-- [Gradio](https://gradio.app/)
-- [OpenAI Python SDK](https://github.com/openai/openai-python)
-- [pypdf](https://pypi.org/project/pypdf/)
-- [Pydantic](https://docs.pydantic.dev/)
-- [Requests](https://requests.readthedocs.io/)
+- [Gradio](https://gradio.app/) – chat interface  
+- [OpenAI Python SDK](https://github.com/openai/openai-python) – LLM backend  
+- [pypdf](https://pypi.org/project/pypdf/) – PDF text extraction  
+- [Pydantic](https://docs.pydantic.dev/) – structured validation  
+- [Requests](https://requests.readthedocs.io/) – lightweight API calls  
